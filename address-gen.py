@@ -5,6 +5,8 @@ from bitcoin.core.script import *
 from bitcoin.wallet import CBitcoinAddress, CBitcoinSecret, P2SHBitcoinAddress, P2WSHBitcoinAddress
 from bitcoin.rpc import Proxy
 
+SelectParams("regtest")
+
 # Create AW, RW and secret and public keys
 
 AW_privkeys = [
