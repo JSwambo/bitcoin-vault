@@ -49,7 +49,8 @@ dummy_address = P2SHBitcoinAddress.from_redeemScript(dummy_redeemScript)
 depositor_witnessScript = CScript([depositor_pubkey, OP_CHECKSIG])
 depositor_scripthash = hashlib.sha256(depositor_witnessScript).digest()
 depositor_redeemScript = CScript([OP_0, depositor_scripthash])
-depositor_address = P2WSHBitcoinAddress.from_scriptPubKey(depositor_redeemScript)
+depositor_address = P2WSHBitcoinAddress.from_scriptPubKey(
+    depositor_redeemScript)
 
 
 # Create P2WSH vault address.
@@ -60,7 +61,8 @@ vault_in_address = P2WSHBitcoinAddress.from_scriptPubKey(vault_in_redeemScript)
 
 
 # Create P2SH output address for vault tx.
-vault_out_redeemscript = CScript([OP_2, AW_pubkeys[0], AW_pubkeys[1], AW_pubkeys[2], OP_3, OP_CHECKMULTISIG])
+vault_out_redeemscript = CScript(
+    [OP_2, AW_pubkeys[0], AW_pubkeys[1], AW_pubkeys[2], OP_3, OP_CHECKMULTISIG])
 # vault_out_redeemscript = CScript([OP_IF, timelock, OP_CHECKSEQUENCEVERIFY, OP_DROP,
 #                                   AW_pubkeys[0], OP_CHECKSIGVERIFY, OP_ELSE, RW_pubkeys[0], OP_CHECKSIGVERIFY, OP_ENDIF])
 serialized_vault_out_redeemscript = b2x(vault_out_redeemscript)  # hex
@@ -69,7 +71,9 @@ vault_out_address = P2SHBitcoinAddress.from_redeemScript(
 
 
 # Create P2SH output address for P2RW tx
-p2rw_out_redeemscript = CScript([OP_2, RW_pubkeys[0], RW_pubkeys[1], RW_pubkeys[2], OP_3, OP_CHECKMULTISIG])
+p2rw_out_redeemscript = CScript(
+    [OP_2, RW_pubkeys[0], RW_pubkeys[1], RW_pubkeys[2], OP_3, OP_CHECKMULTISIG])
 serialized_p2rw_out_redeemscript = b2x(p2rw_out_redeemscript)  # hex
 p2rw_out_address = P2SHBitcoinAddress.from_redeemScript(
     p2rw_out_redeemscript)
+
