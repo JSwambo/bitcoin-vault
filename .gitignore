@@ -1,0 +1,14 @@
+MANIFEST.in
+__pycache__/
+address_gen.py
+bitcoin/
+doc/
+examples/
+prepare_covenants.py
+release-notes.md
+runtests.sh
+setup.py
+signed_deposit_tx.pkl
+signed_vault_tx.pkl
+tox.ini
+*.pyc
