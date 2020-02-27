@@ -46,7 +46,7 @@ amount = int(float(signed_deposit_tx['vout'][0]['value']) * COIN)
 # # # bitcoind minfee setting.
 amount_less_fee = int(amount - (0.01 * COIN))
 
-# # Create the unsigned deposit transaction.
+# # Create the unsigned vault transaction.
 txin = CTxIn(prevout=COutPoint(lx(txid), vout), scriptSig=CScript())
 txout = CTxOut(amount_less_fee, vault_out_redeemScript)
 tx = CMutableTransaction([txin], [txout])
