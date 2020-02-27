@@ -1,11 +1,13 @@
 from bitcoin.core import b2lx, lx, COIN, COutPoint, CTxOut, CTxIn, CTxInWitness, CTxWitness, CScriptWitness, CMutableTransaction, Hash160
 from address_gen import *
 import pprint
+import pickle
 
 
 # # Connect to bitcoind through RPC
 SelectParams("regtest")
 connection = Proxy()
+
 
 # # Fund depositor address
 connection._call('generatetoaddress', 1, str(depositor_address))
@@ -52,7 +54,13 @@ signature = depositor_privkey.sign(sighash) + bytes([SIGHASH_ALL])
 witness = CScriptWitness([signature, depositor_witnessScript])
 tx.wit = CTxWitness([CTxInWitness(witness)])
 
-pprint.pprint(connection._call('decoderawtransaction', b2x(tx.serialize())))
 # # Broadcast the transaction to the regtest network.
 spend_txid = connection.sendrawtransaction(tx)
 
+file_name = "signed_deposit_tx.pkl"
+
+with open(file_name, 'wb') as f:
+    pickle.dump(connection._call('decoderawtransaction', b2x(tx.serialize())), f)
+
+print(f"Spent transaction {b2lx(spend_txid)} and saved to file {file_name}. \n")
+pprint.pprint(connection._call('decoderawtransaction', b2x(tx.serialize())))
