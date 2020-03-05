@@ -22,9 +22,9 @@ amount = int(float(signed_deposit_tx['vout'][0]['value']) * COIN)
 amount_less_fee = int(amount - (0.01 * COIN))
 
 # # Create the unsigned unvault spend transaction.
-txin = CMutableTxIn(COutPoint(lx(txid), vout))
+txin = CMutableTxIn(COutPoint(lx(txid), vout), nSequence=5)
 txout = CTxOut(amount_less_fee, depositor_redeemScript)
-tx = CMutableTransaction([txin], [txout])
+tx = CMutableTransaction([txin], [txout], nLockTime=0, nVersion=2)
 
 # # # Specify which transaction input is going to be signed for.
 txin_index = 0
@@ -42,21 +42,30 @@ sighash = SignatureHash(vault_out_redeemScript, tx, txin_index, SIGHASH_ALL)
 sig1 = AW_privkeys[0].sign(sighash) + bytes([SIGHASH_ALL])
 sig2 = AW_privkeys[1].sign(sighash) + bytes([SIGHASH_ALL])
 
-# Set the scriptSig of our transaction input appropriately.
-txin.scriptSig = CScript([OP_0, sig1, sig2, vault_out_redeemScript])
+
+# Allow time-lock to expire
+print("Generating 6 blocks to ensure time-lock has expired")
+connection._call('generatetoaddress', 6, str(dummy_address))
+
+# Set the scriptSig of our transaction input appropriately. The OP_0 is a dummy variable to satisfy
+# OP_CHECKMULTISIG. OP_1 accesses the IF (active wallet) execution path.
+txin.scriptSig = CScript([OP_0, sig1, sig2, OP_1, vault_out_redeemScript])
+
 
 # Verify the signature worked. This calls EvalScript() and actually executes
 # the opcodes in the scripts to see if everything worked out. If it doesn't an
 # exception will be raised.
-VerifyScript(txin.scriptSig, vault_out_redeemScript.to_p2sh_scriptPubKey(), tx, 0, (SCRIPT_VERIFY_P2SH,))
+VerifyScript(txin.scriptSig, vault_out_scriptPubkey,
+             tx, 0, (SCRIPT_VERIFY_P2SH,))
 
 # #  Broadcast the transaction to the regtest network.
-# spend_txid = connection.sendrawtransaction(tx)
+spend_txid = connection.sendrawtransaction(tx)
 
 file_name = "unvault_to_active_wallet.pkl"
 
 with open(file_name, 'wb') as f:
-    pickle.dump(connection._call('decoderawtransaction', b2x(tx.serialize())), f)
+    pickle.dump(connection._call(
+        'decoderawtransaction', b2x(tx.serialize())), f)
 
 print(f"Spent transaction {b2lx(spend_txid)} and saved to file {file_name}. \n")
 pprint.pprint(connection._call('decoderawtransaction', b2x(tx.serialize())))
