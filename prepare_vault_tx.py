@@ -1,5 +1,6 @@
 from bitcoin.core import b2lx, lx, COIN, COutPoint, CTxOut, CTxIn, CTxInWitness, CTxWitness, CScriptWitness, CMutableTransaction, Hash160
 from address_gen import *
+from bitcoin.core.scripteval import VerifyScript, SCRIPT_VERIFY_P2SH
 import pprint
 import pickle
 
@@ -48,7 +49,7 @@ amount_less_fee = int(amount - (0.01 * COIN))
 
 # # Create the unsigned vault transaction.
 txin = CTxIn(prevout=COutPoint(lx(txid), vout), scriptSig=CScript())
-txout = CTxOut(amount_less_fee, vault_out_redeemScript)
+txout = CTxOut(amount_less_fee, vault_out_address.to_scriptPubKey())
 tx = CMutableTransaction([txin], [txout])
 
 
@@ -63,6 +64,7 @@ signature = vault_in_privkey.sign(sighash) + bytes([SIGHASH_ALL])
 # # # Construct a witness for this P2WSH transaction input and add to tx.
 witness = CScriptWitness([signature, vault_in_witnessScript])
 tx.wit = CTxWitness([CTxInWitness(witness)])
+
 
 # #  Broadcast the transaction to the regtest network.
 spend_txid = connection.sendrawtransaction(tx)

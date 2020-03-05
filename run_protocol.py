@@ -28,3 +28,6 @@ os.system("python3 prepare_vault_tx.py")
 
 # unvault_to_active_wallet.py
 os.system("python3 unvault_to_active_wallet.py")
+
+# push_to_recovery_wallet.py
+# os.system("python3 push_to_recovery_wallet.py")
