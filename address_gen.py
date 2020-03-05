@@ -61,13 +61,12 @@ vault_in_address = P2WSHBitcoinAddress.from_scriptPubKey(vault_in_redeemScript)
 
 
 # Create P2SH output address for vault tx.
-vault_out_redeemScript = CScript(
-    [OP_2, AW_pubkeys[0], AW_pubkeys[1], AW_pubkeys[2], OP_3, OP_CHECKMULTISIG])
-# vault_out_redeemScript = CScript([OP_IF, timelock, OP_CHECKSEQUENCEVERIFY, OP_DROP,
-#                                   AW_pubkeys[0], OP_CHECKSIGVERIFY, OP_ELSE, RW_pubkeys[0], OP_CHECKSIGVERIFY, OP_ENDIF])
-serialized_vault_out_redeemScript = b2x(vault_out_redeemScript)  # hex
-vault_out_address = P2SHBitcoinAddress.from_redeemScript(
-    vault_out_redeemScript)
+timelock = 5
+vault_out_redeemScript = CScript([OP_IF, timelock, OP_CHECKSEQUENCEVERIFY, OP_DROP,
+                                  2, AW_pubkeys[0], AW_pubkeys[1], AW_pubkeys[2], 3, OP_CHECKMULTISIG,
+                                  OP_ELSE, 2, RW_pubkeys[0], RW_pubkeys[1], RW_pubkeys[2], 3, OP_CHECKMULTISIG, OP_ENDIF])
+vault_out_scriptPubkey = vault_out_redeemScript.to_p2sh_scriptPubKey()
+vault_out_address = CBitcoinAddress.from_scriptPubKey(vault_out_scriptPubkey)
 
 
 # Create P2SH output address for P2RW tx
