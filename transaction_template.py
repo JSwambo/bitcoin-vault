@@ -51,9 +51,8 @@ def new_consolidation_transaction(file_name):
     tx.wit = CTxWitness(witnesses)
 
     # # Verify each witness using libbitcoinconsensus
-    # # TODO: Figure out why this verify script fails (even though the the tx is accepted to mempool and mined)
     txin_index = 0
-    for sig in sigs:
+    for (sig, amount) in zip(sigs, amounts):
         ConsensusVerifyScript(CScript(), depositor_redeemScript, tx, txin_index, set([SCRIPT_VERIFY_WITNESS, SCRIPT_VERIFY_P2SH]), amount, CScriptWitness([sig, depositor_witnessScript]))
         txin_index += 1
 
@@ -124,7 +123,7 @@ def new_vault_transaction(file_name):
 
     # # Create the unsigned vault transaction.
     txin = CTxIn(prevout=COutPoint(lx(txid), vout), scriptSig=CScript())
-    txout = CTxOut(amount_less_fee, vault_out_address.to_scriptPubKey())
+    txout = CTxOut(amount_less_fee, vault_out_redeemScript)
     tx = CMutableTransaction([txin], [txout])
 
     # # Specify which transaction input is going to be signed for.
@@ -165,7 +164,7 @@ def new_unvault_transaction(file_name):
     amount_less_fee = amount - MIN_FEE
 
     # # Create the unsigned unvault spend transaction.
-    txin = CMutableTxIn(COutPoint(lx(txid), vout), nSequence=TIMELOCK)
+    txin = CTxIn(COutPoint(lx(txid), vout), scriptSig=CScript(), nSequence=TIMELOCK)
     txout = CTxOut(amount_less_fee, depositor_redeemScript)
     tx = CMutableTransaction([txin], [txout], nLockTime=0, nVersion=2)
 
@@ -174,18 +173,17 @@ def new_unvault_transaction(file_name):
 
     # # Calculate the signature hash for the transaction. This is then signed by the
     # # private keys that control the UTXO being spent here at this txin_index.
-    sighash = SignatureHash(vault_out_redeemScript, tx, txin_index, SIGHASH_ALL)
+    sighash = SignatureHash(vault_out_witnessScript, tx, txin_index, SIGHASH_ALL, amount=amount, sigversion=SIGVERSION_WITNESS_V0)
     sig1 = AW_privkeys[0].sign(sighash) + bytes([SIGHASH_ALL])
     sig2 = AW_privkeys[1].sign(sighash) + bytes([SIGHASH_ALL])
 
-    # # Set the scriptSig of the transaction input appropriately. The OP_0 is a dummy variable to satisfy
+    # # Construct a witness for this P2WSH transaction input and add to tx. The OP_0 is a dummy variable to satisfy
     # # OP_CHECKMULTISIG. OP_1 accesses the IF (active wallet) execution path.
-    txin.scriptSig = CScript([OP_0, sig1, sig2, OP_1, vault_out_redeemScript])
+    witness = CScriptWitness([OP_0, sig1, sig2, OP_1, vault_out_witnessScript])
+    tx.wit = CTxWitness([CTxInWitness(witness)])
 
     # # Verify the scriptSig using libbitcoinconsensus
-    # # TODO: Figure out why this verify script fails
-    # # bitcointx.rpc.VerifyRejectedError: {'code': -26, 'message': 'mandatory-script-verify-flag-failed (Operation not valid with the current stack size)'}
-    # ConsensusVerifyScript(txin.scriptSig, vault_out_scriptPubkey, tx, txin_index, set([SCRIPT_VERIFY_P2SH, SCRIPT_VERIFY_NULLDUMMY, SCRIPT_VERIFY_CHECKSEQUENCEVERIFY]), amount)
+    ConsensusVerifyScript(CScript(), vault_out_redeemScript, tx, txin_index, set([SCRIPT_VERIFY_P2SH, SCRIPT_VERIFY_NULLDUMMY, SCRIPT_VERIFY_CHECKSEQUENCEVERIFY, SCRIPT_VERIFY_WITNESS]), amount, witness)
 
     connection = RPCCaller(allow_default_conf=True)
     store(tx, file_name, connection)
@@ -209,8 +207,8 @@ def new_p2rw_transaction(file_name):
     amount_less_fee = amount - MIN_FEE
 
     # # Create the unsigned unvault spend transaction.
-    txin = CMutableTxIn(COutPoint(lx(txid), vout))
-    txout = CTxOut(amount_less_fee, p2rw_out_scriptPubkey)
+    txin = CTxIn(COutPoint(lx(txid), vout), CScript())
+    txout = CTxOut(amount_less_fee, p2rw_out_redeemScript)
     tx = CMutableTransaction([txin], [txout], nLockTime=0, nVersion=2)
 
     # # Specify which transaction input is going to be signed for.
@@ -218,24 +216,22 @@ def new_p2rw_transaction(file_name):
 
     # # Calculate the signature hash for the transaction. This is then signed by the
     # # private keys that control the UTXO being spent here at this txin_index.
-    sighash = SignatureHash(vault_out_redeemScript, tx, txin_index, SIGHASH_ALL)
+    sighash = SignatureHash(vault_out_witnessScript, tx, txin_index, SIGHASH_ALL, amount=amount, sigversion=SIGVERSION_WITNESS_V0)
     sig = vault_in_privkey.sign(sighash) + bytes([SIGHASH_ALL])
 
-    # Set the scriptSig of our transaction input appropriately. The OP_0 is a dummy variable to satisfy
-    # OP_CHECKMULTISIG. OP_1 accesses the IF (active wallet) execution path.
-    txin.scriptSig = CScript([sig, OP_0, vault_out_redeemScript])
+    # # Construct a witness for this P2WSH transaction input and add to tx.
+    # # OP_0 accesses the IF (recovery wallet) execution path.
+    witness = CScriptWitness([sig, OP_0, vault_out_witnessScript])
+    tx.wit = CTxWitness([CTxInWitness(witness)])
 
     # # Verify the scriptSig using libbitcoinconsensus
-    # # TODO: Figure out why this verify script fails
-    # # bitcointx.rpc.VerifyRejectedError: {'code': -26, 'message': 'mandatory-script-verify-flag-failed (Operation not valid with the current stack size)'}
-    # ConsensusVerifyScript(txin.scriptSig, vault_out_scriptPubkey, tx, txin_index, set([SCRIPT_VERIFY_P2SH]), amount)
+    ConsensusVerifyScript(CScript(), vault_out_redeemScript, tx, txin_index, set([SCRIPT_VERIFY_P2SH, SCRIPT_VERIFY_WITNESS]), amount, witness)
 
     connection = RPCCaller(allow_default_conf=True)
     store(tx, file_name, connection)
     connection.close()
 
     return tx
-
 
 def new_recover_transaction(file_name):
     # # Load the vault transaction.
@@ -252,26 +248,26 @@ def new_recover_transaction(file_name):
     amount_less_fee = amount - MIN_FEE
 
     # # Create the unsigned unvault spend transaction.
-    txin = CMutableTxIn(COutPoint(lx(txid), vout))
+    txin = CTxIn(COutPoint(lx(txid), vout), CScript())
     txout = CTxOut(amount_less_fee, depositor_redeemScript)
-    tx = CMutableTransaction([txin], [txout], nLockTime=0, nVersion=2)
+    tx = CMutableTransaction([txin], [txout])
 
     # # Specify which transaction input is going to be signed for.
     txin_index = 0
 
     # # Calculate the signature hash for the transaction. This is then signed by the
     # # private keys that control the UTXO being spent here at this txin_index.
-    sighash = SignatureHash(p2rw_out_redeemScript, tx, txin_index, SIGHASH_ALL)
+    sighash = SignatureHash(p2rw_out_witnessScript, tx, txin_index, SIGHASH_ALL, amount=amount, sigversion=SIGVERSION_WITNESS_V0)
     sig1 = RW_privkeys[0].sign(sighash) + bytes([SIGHASH_ALL])
     sig2 = RW_privkeys[1].sign(sighash) + bytes([SIGHASH_ALL])
 
-    # Set the scriptSig of our transaction input appropriately. The OP_0 is a dummy variable to satisfy
-    # OP_CHECKMULTISIG. OP_1 accesses the IF (active wallet) execution path.
-    txin.scriptSig = CScript([OP_0, sig1, sig2, OP_0, p2rw_out_redeemScript])
+    # # Construct a witness for this P2WSH transaction input and add to tx. The OP_0 is a dummy variable to satisfy
+    # # OP_CHECKMULTISIG. OP_1 accesses the IF (active wallet) execution path.
+    witness = CScriptWitness([OP_0, sig1, sig2, p2rw_out_witnessScript])
+    tx.wit = CTxWitness([CTxInWitness(witness)])
 
     # # Verify the scriptSig using libbitcoinconsensus
-    # # TODO: Figure out why this verify script fails
-    ConsensusVerifyScript(txin.scriptSig, vault_out_scriptPubkey, tx, txin_index, set([SCRIPT_VERIFY_P2SH, SCRIPT_VERIFY_NULLDUMMY, SCRIPT_VERIFY_CHECKSEQUENCEVERIFY]), amount)
+    ConsensusVerifyScript(CScript(), p2rw_out_redeemScript, tx, txin_index, set([SCRIPT_VERIFY_P2SH, SCRIPT_VERIFY_NULLDUMMY, SCRIPT_VERIFY_WITNESS]), amount, witness)
 
     connection = RPCCaller(allow_default_conf=True)
     store(tx, file_name, connection)

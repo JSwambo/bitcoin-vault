@@ -48,6 +48,7 @@ depositor_redeemScript = CScript([OP_0, depositor_scripthash])
 depositor_address = CCoinAddress.from_scriptPubKey(
     depositor_redeemScript)
 
+
 # # Create P2WSH vault address (used for vault_transaction and p2rw_transaction)
 vault_in_witnessScript = CScript([vault_in_pubkey, OP_CHECKSIG])
 vault_in_scripthash = hashlib.sha256(vault_in_witnessScript).digest()
@@ -55,20 +56,24 @@ vault_in_redeemScript = CScript([OP_0, vault_in_scripthash])
 vault_in_address = CCoinAddress.from_scriptPubKey(vault_in_redeemScript)
 
 
-# # Create P2SH output address for vault tx.
-vault_out_redeemScript = CScript([OP_IF, TIMELOCK, OP_CHECKSEQUENCEVERIFY, OP_DROP,
-                                  2, AW_pubkeys[0], AW_pubkeys[1], AW_pubkeys[2], 3, OP_CHECKMULTISIG,
-                                  OP_ELSE, vault_in_pubkey, OP_CHECKSIG, OP_ENDIF])
-vault_out_scriptPubkey = vault_out_redeemScript.to_p2sh_scriptPubKey()
-vault_out_address = CCoinAddress.from_scriptPubKey(vault_out_scriptPubkey)
+# # Create P2WSH output address for vault tx.
+vault_out_witnessScript = CScript([OP_IF, TIMELOCK, OP_CHECKSEQUENCEVERIFY, OP_DROP,
+                                   2, AW_pubkeys[0], AW_pubkeys[1], AW_pubkeys[2], 3, OP_CHECKMULTISIG,
+                                   OP_ELSE, vault_in_pubkey, OP_CHECKSIG, OP_ENDIF])
+vault_out_scripthash = hashlib.sha256(vault_out_witnessScript).digest()
+vault_out_redeemScript = CScript([OP_0, vault_out_scripthash])
+vault_out_address = CCoinAddress.from_scriptPubKey(
+    depositor_redeemScript)
 
 
-# # Create P2SH output address for recover transaction.
-p2rw_out_redeemScript = CScript(
+# # Create P2WSH output address for p2rw transaction
+p2rw_out_witnessScript = CScript(
     [OP_2, RW_pubkeys[0], RW_pubkeys[1], RW_pubkeys[2], OP_3, OP_CHECKMULTISIG])
-p2rw_out_scriptPubkey = p2rw_out_redeemScript.to_p2sh_scriptPubKey()
+p2rw_out_scripthash = hashlib.sha256(p2rw_out_witnessScript).digest()
+p2rw_out_redeemScript = CScript([OP_0, p2rw_out_scripthash])
 p2rw_out_address = CCoinAddress.from_scriptPubKey(
-    p2rw_out_scriptPubkey)
+    p2rw_out_redeemScript)
+
 
 if __name__ == '__main__':
     print(f"Pay to: {depositor_address}")
@@ -84,5 +89,5 @@ if __name__ == '__main__':
             "keys": [str(depositor_privkey)]
         }
     ], {"rescan": True})
- 
+
     connection.close()
