@@ -1,6 +1,7 @@
 from handle_transaction import store, load, broadcast
 from generate_addresses import *
-from config import MIN_FEE, TIMELOCK
+from config import MIN_FEE, TIMELOCK, PORTION_TO_VAULT
+from protocol_errors import ProtocolError
 from bitcointx.core.scripteval import SCRIPT_VERIFY_WITNESS, SCRIPT_VERIFY_CHECKSEQUENCEVERIFY, SCRIPT_VERIFY_P2SH, SCRIPT_VERIFY_NULLDUMMY
 from bitcointx.core.bitcoinconsensus import ConsensusVerifyScript
 from bitcointx.core import b2lx, lx, coins_to_satoshi, COutPoint, CTxOut, CTxIn, CTxInWitness, CTxWitness, CMutableTransaction, CMutableTxIn, Hash160, CTransaction
@@ -67,21 +68,19 @@ def new_deposit_transaction(file_name):
     connection = RPCCaller(allow_default_conf=True)
     unspents = connection._call("listunspent", 1, 9999999, [
         str(depositor_address)], True, {"minimumAmount": 0.0})
-
+    if unspents == []:
+        raise(ProtocolError('No unspent transaction outputs available.'))
     utxo = unspents[0]
     txid = utxo['txid']
     vout = utxo['vout']
     amount = int(coins_to_satoshi(utxo["amount"]))
     amount_less_fee = amount - MIN_FEE
 
-    # # Specify the percentage amount to deposit to the vault
-    percentage_to_deposit = 0.5
-
     # # Create the unsigned deposit transaction.
     txin = CTxIn(prevout=COutPoint(lx(txid), vout), scriptSig=CScript())
     txout_vault = CTxOut(
-        int(percentage_to_deposit * amount_less_fee), vault_in_redeemScript)
-    txout_change = CTxOut(int((1 - percentage_to_deposit)
+        int(PORTION_TO_VAULT * amount_less_fee), vault_in_redeemScript)
+    txout_change = CTxOut(int((1 - PORTION_TO_VAULT)
                               * amount_less_fee), depositor_redeemScript)
     tx = CMutableTransaction([txin], [txout_vault, txout_change])
 
