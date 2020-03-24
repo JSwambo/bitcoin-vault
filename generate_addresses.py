@@ -5,6 +5,11 @@ from bitcointx.core.script import *
 from bitcointx.wallet import CCoinAddress, CBitcoinSecret
 from bitcointx.rpc import RPCCaller
 from config import TIMELOCK
+from bitcointx.base58 import encode
+
+# importing binascii to be able to convert hexadecimal strings to binary data
+import binascii
+unhexlify = binascii.unhexlify
 
 select_chain_params("bitcoin/testnet")
 
@@ -40,6 +45,11 @@ vault_in_privkey = CBitcoinSecret.from_secret_bytes(
 
 vault_in_pubkey = vault_in_privkey.pub
 
+fee_wallet_privkey = CBitcoinSecret.from_secret_bytes(
+    hashlib.sha256(b'Fee Wallet Brain Secret').digest())
+
+fee_wallet_pubkey = fee_wallet_privkey.pub
+
 
 # # Create P2WSH address for depositor.
 depositor_witnessScript = CScript([depositor_pubkey, OP_CHECKSIG])
@@ -47,6 +57,13 @@ depositor_scripthash = hashlib.sha256(depositor_witnessScript).digest()
 depositor_redeemScript = CScript([OP_0, depositor_scripthash])
 depositor_address = CCoinAddress.from_scriptPubKey(
     depositor_redeemScript)
+
+# # Create P2WSH address for fee_wallet.
+fee_wallet_witnessScript = CScript([fee_wallet_pubkey, OP_CHECKSIG])
+fee_wallet_scripthash = hashlib.sha256(fee_wallet_witnessScript).digest()
+fee_wallet_redeemScript = CScript([OP_0, fee_wallet_scripthash])
+fee_wallet_address = CCoinAddress.from_scriptPubKey(
+    fee_wallet_redeemScript)
 
 
 # # Create P2WSH vault address (used for vault_transaction and p2rw_transaction)
@@ -74,20 +91,13 @@ p2rw_out_redeemScript = CScript([OP_0, p2rw_out_scripthash])
 p2rw_out_address = CCoinAddress.from_scriptPubKey(
     p2rw_out_redeemScript)
 
-
 if __name__ == '__main__':
-    print(f"Pay to: {depositor_address}")
+    print(f"Pay to main wallet: {depositor_address}")
+    print(f"Pay to fee wallet: {fee_wallet_address}")
 
     connection = RPCCaller(allow_default_conf=True)
-
-    # # Give the private keys to bitcoind (for ismine, listunspent, etc). #TODO: Test if rescan needed if txindex=0
-    connection._call('importmulti', [
-        {
-            "scriptPubKey": {"address": str(depositor_address)},
-            "timestamp": 0,
-            "witnessscript": b2x(depositor_witnessScript),
-            "keys": [str(depositor_privkey)]
-        }
-    ], {"rescan": True})
-
+    connection._call('importaddress', str(
+        depositor_address), "Depositor Address", False)
+    connection._call('importaddress', str(fee_wallet_address),
+                     "Fee Wallet Address", False)
     connection.close()
