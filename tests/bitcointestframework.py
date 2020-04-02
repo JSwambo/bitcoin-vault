@@ -14,6 +14,7 @@ from test_framework.test_framework import (
     BitcoinTestFramework,
     TestStatus,
     )
+from handle_transaction import load, update_fee
 from test_framework.util import connect_nodes, disconnect_nodes
 from test_framework.authproxy import JSONRPCException
 from generate_addresses import depositor_address, fee_wallet_address
@@ -24,7 +25,6 @@ from transaction_template import (
     new_p2rw_transaction,
     new_recover_transaction,
     )
-from handle_transaction import load, update_fee
 from bitcointx.core import b2x
 from bitcointx.core import CTransaction
 
