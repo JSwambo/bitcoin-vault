@@ -1,15 +1,18 @@
 # Bitcoin-vault
-Implementation of a time-locked vault covenant using pre-signed transactions with secure key deletion.
-
-Use these scripts to construct (vault, push-to-recovery) covenant transaction pairs. These scripts are for prototyping (bitcoin) Script variants and investigating how mempool policies regarding fees and dependent transactions will affect the intended use of these covenant pairs in custody protocols. 
+This implementation is used to test the correctness of components of the Vault Custody Protocol (as specified in an upcoming research paper). This includes testing the construction of vault covenants and push-to-recovery-wallet covenants. These covenants are implemented using pre-signed transactions with secure key deletion (as specified in a separate upcoming research paper). 
 
 # Dependencies
-These scripts require a running instance of bitcoin core in testnet mode. 
-This protocol requires python-bitcointx. 
+This implementation requires python-bitcointx, and uses bindings therein to libbitcoinconsensus to verify the transactions.
+This implementation requires BitcoinTestFramework from bitcoin-core/tests/functional. 
 
 # Usage
+These scripts are not intended for real-world use. They may inform the development of a new type of wallet that supports the Vault Custody Protocol. 
 
-First run generate_addresses.py to get an address to fund with testnet coins, and to import the address and private keys to bitcoind.
-
-Then use vaults-cli.py to create (--new flag), load (--load flag), and spend (--broadcast flag) various transaction types used in this protocol. The transaction types are utxo consolidation transaction (-c), deposit-to-vault transaction (-d), vault transaction (-v), unvault transaction (-u), push-to-recovery-wallet transaction (-p), recover transaction (-r). A session ID can be specified (-sid [num]) to ensure that saved transactions from a session aren't read or written to in a different session. 
+Run bitcointestframework.py to generate a local regtest network and perform tests including:
+    - Test of basic transaction flow for deposit -> vault -> unvault.
+    - Test of basic transaction flow for deposit -> vault -> p2rw -> recover.
+    - Test of mempool acceptance for unconfirmed deposit, vault, un-vault transactions.
+    - Test of mempool acceptance for unconfirmed deposit, vault, p2rw, recover transactions.
+    - Test of RBF for unvault and p2rw transactions.
+    - Test of recovery from vault transaction theft.
 
