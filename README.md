@@ -8,11 +8,11 @@ This implementation requires BitcoinTestFramework from [bitcoin-core/tests/funct
 # Usage
 These scripts are not intended for real-world use. They may inform the development of a new type of wallet that supports the Vault Custody Protocol. 
 
-Run bitcointestframework.py to generate a local regtest network and perform tests including:
-    - Test of basic transaction flow for deposit -> vault -> unvault.
-    - Test of basic transaction flow for deposit -> vault -> p2rw -> recover.
-    - Test of mempool acceptance for unconfirmed deposit, vault, un-vault transactions.
-    - Test of mempool acceptance for unconfirmed deposit, vault, p2rw, recover transactions.
-    - Test of RBF for unvault and p2rw transactions.
+Run bitcointestframework.py to generate a local regtest network and perform tests including:\
+    - Test of basic transaction flow for deposit -> vault -> unvault.\
+    - Test of basic transaction flow for deposit -> vault -> p2rw -> recover.\
+    - Test of mempool acceptance for unconfirmed deposit, vault, un-vault transactions.\
+    - Test of mempool acceptance for unconfirmed deposit, vault, p2rw, recover transactions.\
+    - Test of RBF for unvault and p2rw transactions.\
     - Test of recovery from vault transaction theft.
 
